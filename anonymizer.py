@@ -9,9 +9,9 @@ from MozillaEmulator import *
 dl = MozillaEmulator()
 
 class Params():
-    
-    username = u'Stqs'
-    password = u'53377'
+
+    username = None
+    password = None
     
     session = None
     domain = None
@@ -68,11 +68,13 @@ def get_login_redirect_link(page):
     link = soup.html.body.form.font.table.findAll('a')[0]['href']
     return urllib.unquote(link)
 
-@app.route('/<domain>/', methods=['GET'])
-def make_login(domain):
+@app.route('/<domain>/<username>/<password>/', methods=['GET'])
+def make_login(domain, username, password):
     if domain == 'favicon.ico':
         abort(404)
     params.domain = unicode(domain)
+    params.username = unicode(username)
+    params.password = unicode(password)
     login_url = 'http://%s/wap/Login.aspx?Login=%s&Password=%s' % (params.domain, 
                                                                    params.username,
                                                                    params.password)
