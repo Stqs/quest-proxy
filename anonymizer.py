@@ -1,4 +1,5 @@
 # -*- coding: utf8 -*-
+
 import random
 import urllib
 from flask import Flask, redirect, abort, render_template, request
