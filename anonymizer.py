@@ -87,39 +87,41 @@ def make_login(domain, username, password):
 
 @app.route('/<path:url>', methods=['GET', 'POST'])
 def fetch_url(url):
-    
-    if url == 'favicon.ico' or url == 'robots.txt':
-        abort(404)
-    if url.split('/')[-1] == 'default.aspx':
-        return redirect(url_for('make_login', domain=url.split('/')[2]))
-    is_game_url = False 
-   
-    if request.method == 'GET':
-        if 'GameEngine.aspx' in url:
-            if params.gid is None:
-                params.gid = request.args.get('gid', '')
-            new_url = url + "?" + urllib.urlencode(params.get_GET_params())
+    try:
+        if url == 'favicon.ico' or url == 'robots.txt':
+            abort(404)
+        if url.split('/')[-1] == 'default.aspx':
+            return redirect(url_for('make_login', domain=url.split('/')[2]))
+        is_game_url = False 
+       
+        if request.method == 'GET':
+            if 'GameEngine.aspx' in url:
+                if params.gid is None:
+                    params.gid = request.args.get('gid', '')
+                new_url = url + "?" + urllib.urlencode(params.get_GET_params())
+                is_game_url = True
+            else:
+                new_url = url
+            page = dl.download(urllib.unquote(new_url))
+          
+        if request.method == 'POST':
+            post_params = params.post_params
+            # add answer, bonus answers, and put answer commands
+            for key, value in request.form.items():
+                if key == 'Answer' or key.startswith('PutAnswerCommand'):
+                    post_params.update({key: value})
+                    
+            get_params = params.get_GET_params()
+            get_params.update({'__ufps': params.p__ufps})
+            new_url = url + "?" + urllib.urlencode(get_params)
+            page = dl.download(urllib.unquote(new_url), postdata=urllib.urlencode(dict([k, v.encode('utf-8')] for k, v in post_params.items())))
             is_game_url = True
-        else:
-            new_url = url
-        page = dl.download(urllib.unquote(new_url))
-      
-    if request.method == 'POST':
-        post_params = params.post_params
-        # add answer, bonus answers, and put answer commands
-        for key, value in request.form.items():
-            if key == 'Answer' or key.startswith('PutAnswerCommand'):
-                post_params.update({key: value})
-                
-        get_params = params.get_GET_params()
-        get_params.update({'__ufps': params.p__ufps})
-        new_url = url + "?" + urllib.urlencode(get_params)
-        page = dl.download(urllib.unquote(new_url), postdata=urllib.urlencode(dict([k, v.encode('utf-8')] for k, v in post_params.items())))
-        is_game_url = True
-        if 'Логин или id' in page:
-            return redirect(url_for('make_login', domain=url.split('/')[2]))    
-    head, body = parse_html(page, is_game_url)
-    return render_template('main.html', head=head, body=body)
+            if 'Логин или id' in page:
+                return redirect(url_for('make_login', domain=url.split('/')[2]))    
+        head, body = parse_html(page, is_game_url)
+        return render_template('main.html', head=head, body=body)
+    except Exception, e:
+        return render_template('main.html', head='', body=str(e))
 
 if __name__ == "__main__":
     app.debug = True
