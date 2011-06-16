@@ -1,0 +1,24 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<body>
+<form action="" method="post">
+    source:<input type="text" value="{{ src }}" name="src" size="200">
+    <br>
+    filters:<input type="text" value="{{ filters }}" name="filters" size="200">
+    <br>
+    {% if res %}
+        remain: {{ res }}
+    {% endif %}
+    <br>
+    {% if extra %}
+        extra: {{ extra }}
+    {% endif %}
+    <br>
+    
+    <input type="submit">
+</form>
+{% if final %}
+    result: {{ final }}
+{% endif %}
+</body>
+</html>

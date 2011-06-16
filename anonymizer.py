@@ -121,7 +121,36 @@ def fetch_url(url):
         head, body = parse_html(page, is_game_url)
         return render_template('main.html', head=head, body=body)
     except Exception, e:
-        return render_template('main.html', head='', body=str(e))
+        return render_template('main.html', head='', body=[str(e)])
+    
+@app.route('/takusogramma', methods=['GET', 'POST'])
+def takusogramma():
+    if request.method == 'POST':
+        src = request.form['src']
+        filters = request.form['filters']
+        extra = ''
+        res = src.replace(' ', '')
+        for c in filters.replace(' ', ''):
+            if c in res: 
+                res = res.replace(c, '', 1)
+            else:
+                extra += c
+        
+        final = ''
+        if len(res)==0 and len(extra)==0:
+            final = "%s = %s" % (src, filters) 
+    else:
+        src = ''
+        filters = ''
+        res = ''
+        final = ''
+        extra= ''
+    return render_template('takuso.html', 
+                           src=src, 
+                           filters=filters, 
+                           res=res,
+                           final=final,
+                           extra=extra)
 
 if __name__ == "__main__":
     app.debug = True
