@@ -2,6 +2,8 @@
 
 import random
 import urllib
+import string
+
 from flask import Flask, redirect, abort, render_template, request
 app = Flask(__name__)
 
@@ -127,6 +129,9 @@ def fetch_url(url):
 def takusogramma():
     if request.method == 'POST':
         src = request.form['src']
+        for p in string.punctuation:
+            src = src.replace(p, '')
+            
         filters = request.form['filters']
         extra = ''
         res = src.replace(' ', '')
