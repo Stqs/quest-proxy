@@ -12,7 +12,6 @@ import md5
 import urllib
 import urllib2
 import mimetypes
-#from gzip import GzipFile
 import cStringIO
 from cPickle import loads,dumps
 import cookielib
@@ -74,15 +73,11 @@ class MozillaEmulator(object):
         h.update(data)
         return h.hexdigest()
 
-    def build_opener(self,url,postdata=None,extraheaders={},forbid_redirect=False):
+    def build_opener(self,url,postdata=None,extraheaders={},forbid_redirect=False, proxy=None):
         txheaders = {
             'Accept':'text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5',
             'Accept-Language':'en,hu;q=0.8,en-us;q=0.5,hu-hu;q=0.3',
-#            'Accept-Encoding': 'gzip, deflate',
             'Accept-Charset': 'ISO-8859-1,utf-8;q=0.7,*;q=0.7',
-#            'Keep-Alive': '300',
-#            'Connection': 'keep-alive',
-#            'Cache-Control': 'max-age=0',
         }
         for key,value in extraheaders.iteritems():
             txheaders[key] = value
@@ -95,15 +90,19 @@ class MozillaEmulator(object):
 
         http_handler = urllib2.HTTPHandler(debuglevel=self.debug)
         https_handler = urllib2.HTTPSHandler(debuglevel=self.debug)
-
-        u = urllib2.build_opener(http_handler,https_handler,urllib2.HTTPCookieProcessor(self.cookies),redirector)
+        if proxy:
+            proxy_support = urllib2.ProxyHandler(proxy)
+            u = urllib2.build_opener(proxy_support, http_handler,https_handler,urllib2.HTTPCookieProcessor(self.cookies),redirector)
+        else:
+            u = urllib2.build_opener(http_handler,https_handler,urllib2.HTTPCookieProcessor(self.cookies),redirector)
         u.addheaders = [('User-Agent','Mozilla/5.0 (Windows; U; Windows NT 5.1; hu-HU; rv:1.7.8) Gecko/20050511 Firefox/1.0.4')]
+        
         if not postdata is None:
             req.add_data(postdata)
         return (req,u)
 
     def download(self,url,postdata=None,extraheaders={},forbid_redirect=False,
-            trycount=None,fd=None,onprogress=None,only_head=False):
+            trycount=None,fd=None,onprogress=None,only_head=False, proxy=None):
         """Download an URL with GET or POST methods.
 
         @param postdata: It can be a string that will be POST-ed to the URL.
@@ -134,7 +133,7 @@ class MozillaEmulator(object):
             try:
                 key = self._hash(url)
                 if (self.cacher is None) or (not self.cacher.has_key(key)):
-                    req,u = self.build_opener(url,postdata,extraheaders,forbid_redirect)
+                    req,u = self.build_opener(url,postdata,extraheaders,forbid_redirect, proxy=proxy)
                     openerdirector = u.open(req)
                     if self.debug:
                         print req.get_method(),url
@@ -167,80 +166,14 @@ class MozillaEmulator(object):
                                 onprogress(length,dlength)
                             if not newdata:
                                 break
-                        #data = openerdirector.read()
                         if not (self.cacher is None):
                             self.cacher[key] = data
                 else:
                     data = self.cacher[key]
-                #try:
-                #    d2= GzipFile(fileobj=cStringIO.StringIO(data)).read()
-                #    data = d2
-                #except IOError:
-                #    pass
                 return data
             except urllib2.URLError:
                 cnt += 1
                 if (trycount > -1) and (trycount < cnt):
                     raise
-                # Retry :-)
                 if self.debug:
                     print "MozillaEmulator: urllib2.URLError, retryting ",cnt
-
-
-    def post_multipart(self,url,fields, files, forbid_redirect=True):
-        """Post fields and files to an http host as multipart/form-data.
-        fields is a sequence of (name, value) elements for regular form fields.
-        files is a sequence of (name, filename, value) elements for data to be uploaded as files
-        Return the server's response page.
-        """
-        content_type, post_data = encode_multipart_formdata(fields, files)
-        result = self.download(url,post_data,{
-            'Content-Type': content_type,
-            'Content-Length': str(len(post_data))
-        },forbid_redirect=forbid_redirect
-        )
-        return result
-
-
-class HTTPNoRedirector(urllib2.HTTPRedirectHandler):
-    """This is a custom http redirect handler that FORBIDS redirection."""
-    def http_error_302(self, req, fp, code, msg, headers):
-        e = urllib2.HTTPError(req.get_full_url(), code, msg, headers, fp)
-        if e.code in (301,302):
-            if 'location' in headers:
-                newurl = headers.getheaders('location')[0]
-            elif 'uri' in headers:
-                newurl = headers.getheaders('uri')[0]
-            e.newurl = newurl
-        raise e
-
-
-            
-def encode_multipart_formdata(fields, files):
-    """
-    fields is a sequence of (name, value) elements for regular form fields.
-    files is a sequence of (name, filename, value) elements for data to be uploaded as files
-    Return (content_type, body) ready for httplib.HTTP instance
-    """
-    BOUNDARY = '----------ThIs_Is_tHe_bouNdaRY_$'
-    CRLF = '\r\n'
-    L = []
-    for (key, value) in fields:
-        L.append('--' + BOUNDARY)
-        L.append('Content-Disposition: form-data; name="%s"' % key)
-        L.append('')
-        L.append(value)
-    for (key, filename, value) in files:
-        L.append('--' + BOUNDARY)
-        L.append('Content-Disposition: form-data; name="%s"; filename="%s"' % (key, filename))
-        L.append('Content-Type: %s' % get_content_type(filename))
-        L.append('')
-        L.append(value)
-    L.append('--' + BOUNDARY + '--')
-    L.append('')
-    body = CRLF.join(L)
-    content_type = 'multipart/form-data; boundary=%s' % BOUNDARY
-    return content_type, body
-
-def get_content_type(filename):
-    return mimetypes.guess_type(filename)[0] or 'application/octet-stream'
