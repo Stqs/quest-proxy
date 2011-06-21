@@ -66,7 +66,6 @@ class MozillaEmulator(object):
                 A value of 0 means no retrying. A value of 1 means one retry. etc."""
         self.cacher = cacher
         self.cookies = cookielib.CookieJar()
-        self.debug = False
         self.trycount = trycount
     def _hash(self,data):
         h = md5.new()
@@ -88,8 +87,8 @@ class MozillaEmulator(object):
         else:
             redirector = urllib2.HTTPRedirectHandler()
 
-        http_handler = urllib2.HTTPHandler(debuglevel=self.debug)
-        https_handler = urllib2.HTTPSHandler(debuglevel=self.debug)
+        http_handler = urllib2.HTTPHandler(debuglevel=False)
+        https_handler = urllib2.HTTPSHandler(debuglevel=False)
         if proxy:
             proxy_support = urllib2.ProxyHandler(proxy)
             u = urllib2.build_opener(proxy_support, http_handler,https_handler,urllib2.HTTPCookieProcessor(self.cookies),redirector)
@@ -129,51 +128,45 @@ class MozillaEmulator(object):
         if trycount is None:
             trycount = self.trycount
         cnt = 0
-        while True:
-            try:
-                key = self._hash(url)
-                if (self.cacher is None) or (not self.cacher.has_key(key)):
-                    req,u = self.build_opener(url,postdata,extraheaders,forbid_redirect, proxy=proxy)
-                    openerdirector = u.open(req)
-                    if self.debug:
-                        print req.get_method(),url
-                        print openerdirector.code,openerdirector.msg
-                        print openerdirector.headers
-                    self.cookies.extract_cookies(openerdirector,req)
-                    if only_head:
-                        return openerdirector
-                    if openerdirector.headers.has_key('content-length'):
-                        length = long(openerdirector.headers['content-length'])
-                    else:
-                        length = 0
-                    dlength = 0
-                    if fd:
-                        while True:
-                            data = openerdirector.read(1024)
-                            dlength += len(data)
-                            fd.write(data)
-                            if onprogress:
-                                onprogress(length,dlength)
-                            if not data:
-                                break
-                    else:
-                        data = ''
-                        while True:
-                            newdata = openerdirector.read(1024)
-                            dlength += len(newdata)
-                            data += newdata
-                            if onprogress:
-                                onprogress(length,dlength)
-                            if not newdata:
-                                break
-                        if not (self.cacher is None):
-                            self.cacher[key] = data
-                else:
-                    data = self.cacher[key]
-                return data
-            except urllib2.URLError:
-                cnt += 1
-                if (trycount > -1) and (trycount < cnt):
-                    raise
-                if self.debug:
-                    print "MozillaEmulator: urllib2.URLError, retryting ",cnt
+        #while True:
+            #try:
+        key = self._hash(url)
+        if (self.cacher is None) or (not self.cacher.has_key(key)):
+            req,u = self.build_opener(url,postdata,extraheaders,forbid_redirect, proxy=proxy)
+            openerdirector = u.open(req)
+            self.cookies.extract_cookies(openerdirector,req)
+            if only_head:
+                return openerdirector
+            if openerdirector.headers.has_key('content-length'):
+                length = long(openerdirector.headers['content-length'])
+            else:
+                length = 0
+            dlength = 0
+            if fd:
+                while True:
+                    data = openerdirector.read(1024)
+                    dlength += len(data)
+                    fd.write(data)
+                    if onprogress:
+                        onprogress(length,dlength)
+                    if not data:
+                        break
+            else:
+                data = ''
+                while True:
+                    newdata = openerdirector.read(1024)
+                    dlength += len(newdata)
+                    data += newdata
+                    if onprogress:
+                        onprogress(length,dlength)
+                    if not newdata:
+                        break
+                if not (self.cacher is None):
+                    self.cacher[key] = data
+        else:
+            data = self.cacher[key]
+        return data
+#            except urllib2.URLError:
+#                cnt += 1
+#                if (trycount > -1) and (trycount < cnt):
+#                    raise
