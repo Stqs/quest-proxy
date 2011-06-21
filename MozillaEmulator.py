@@ -17,44 +17,6 @@ from cPickle import loads,dumps
 import cookielib
 
 
-class MozillaCacher(object):
-    """A dictionary like object, that can cache results on a storage device."""
-    def __init__(self,cachedir='.cache'):
-        self.cachedir = cachedir
-        if not os.path.isdir(cachedir):
-            os.mkdir(cachedir)
-    def name2fname(self,name):
-        return os.path.join(self.cachedir,name)
-    def __getitem__(self,name):
-        if not isinstance(name,str):
-            raise TypeError()
-        fname = self.name2fname(name)
-        if os.path.isfile(fname):
-            return file(fname,'rb').read()
-        else:
-            raise IndexError()
-    def __setitem__(self,name,value):
-        if not isinstance(name,str):
-            raise TypeError()
-        fname = self.name2fname(name)
-        if os.path.isfile(fname):
-            os.unlink(fname)
-        f = file(fname,'wb+')
-        try:
-            f.write(value)
-        finally:
-            f.close()
-    def __delitem__(self,name):
-        if not isinstance(name,str):
-            raise TypeError()
-        fname = self.name2fname(name)
-        if os.path.isfile(fname):
-            os.unlink(fname)
-    def __iter__(self):
-        raise NotImplementedError()
-    def has_key(self,name):
-        return os.path.isfile(self.name2fname(name))
-
 class MozillaEmulator(object):
     def __init__(self,cacher={},trycount=0):
         """Create a new MozillaEmulator object.
