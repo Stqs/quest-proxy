@@ -104,7 +104,6 @@ def fetch_url(url):
                 is_game_url = True
             else:
                 new_url = url
-            new_url = 'http://2ip.ru'
             page = dl.download(urllib.unquote(new_url), proxy={'http': '75.126.176.218:6953'})
           
         if request.method == 'POST':
